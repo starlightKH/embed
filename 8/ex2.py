@@ -1,5 +1,4 @@
 #싱글 - 멀티 프로세스 - 멀티 스레딩 순으로 빠른 이유 기술
-
 import time
 import cv2
 import threading

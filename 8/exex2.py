@@ -2,54 +2,41 @@ import Jetson.GPIO as GPIO
 import time
 import multiprocessing
 
-LED_PIN = 33   # PWM 가능한 핀으로 수정해서 사용
+LED_PIN = 33   # PWM 가능한 핀으로 수정
 
 
-def input_process(speed_value):
-    while True:
-        try:
-            value = int(input("속도 입력 0~10: "))
-
-            if 0 <= value <= 10:
-                speed_value.value = value
-                print(f"속도 변경: {value}")
-
-            else:
-                print("0~10 사이 정수를 입력하세요.")
-
-        except:
-            print("정수를 입력하세요.")
-
-
-def pwm_process(speed_value):
+def pwm_process(speed_value, stop_event):
     GPIO.setmode(GPIO.BOARD)
     GPIO.setup(LED_PIN, GPIO.OUT)
 
-    pwm = GPIO.PWM(LED_PIN, 1000)   # 1000Hz PWM
+    pwm = GPIO.PWM(LED_PIN, 1000)
     pwm.start(0)
 
     try:
-        while True:
+        while not stop_event.is_set():
             speed = speed_value.value
 
-            # 0이면 가장 느리게, 10이면 가장 빠르게
+            # 0이면 느리게, 10이면 빠르게
             delay = 0.1 - (speed * 0.009)
 
             if delay < 0.01:
                 delay = 0.01
 
-            # LED 밝아짐
+            # 밝아짐
             for duty in range(0, 101):
+                if stop_event.is_set():
+                    break
+
                 pwm.ChangeDutyCycle(duty)
                 time.sleep(delay)
 
-            # LED 어두워짐
+            # 어두워짐
             for duty in range(100, -1, -1):
+                if stop_event.is_set():
+                    break
+
                 pwm.ChangeDutyCycle(duty)
                 time.sleep(delay)
-
-    except KeyboardInterrupt:
-        print("PWM 종료")
 
     finally:
         pwm.stop()
@@ -57,24 +44,44 @@ def pwm_process(speed_value):
 
 
 if __name__ == "__main__":
-    # 프로세스끼리 공유할 속도값
+    # 프로세스끼리 공유할 속도 값
     speed_value = multiprocessing.Value("i", 5)
 
-    p1 = multiprocessing.Process(target=input_process, args=(speed_value,))
-    p2 = multiprocessing.Process(target=pwm_process, args=(speed_value,))
+    # 종료 신호
+    stop_event = multiprocessing.Event()
 
-    p1.start()
-    p2.start()
+    # PWM 제어 프로세스 생성
+    p = multiprocessing.Process(
+        target=pwm_process,
+        args=(speed_value, stop_event)
+    )
+
+    p.start()
 
     try:
-        p1.join()
-        p2.join()
+        while True:
+            user_input = input("속도 입력 0~10 / 종료 q: ")
+
+            if user_input == "q":
+                stop_event.set()
+                break
+
+            try:
+                value = int(user_input)
+
+                if 0 <= value <= 10:
+                    speed_value.value = value
+                    print(f"속도 변경: {value}")
+
+                else:
+                    print("0~10 사이 정수를 입력하세요.")
+
+            except ValueError:
+                print("정수를 입력하세요.")
 
     except KeyboardInterrupt:
-        print("프로그램 종료")
+        print("종료")
 
-        p1.terminate()
-        p2.terminate()
-
-        p1.join()
-        p2.join()
+    finally:
+        stop_event.set()
+        p.join()
