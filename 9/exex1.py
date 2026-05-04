@@ -8,29 +8,31 @@
 # --runtime=nvidia \
 # my_torch:1.0 /bin/bash
 
-import cv2
+import Jetson.GPIO as GPIO
+import time
 
-cap = cv2.VideoCapture(0)
+PWM_PIN = 33
 
-if not cap.isOpened():
-    print("카메라를 열 수 없습니다.")
-else:
-    print("카메라 연결 성공")
+GPIO.setmode(GPIO.BOARD)
+GPIO.setup(PWM_PIN, GPIO.OUT)
 
-while True:
-    ret, frame = cap.read()
+pwm = GPIO.PWM(PWM_PIN, 1000)
+pwm.start(0)
 
-    if not ret:
-        print("프레임 읽기 실패")
-        break
+try:
+    while True:
+        for dc in range(0, 101):
+            pwm.ChangeDutyCycle(dc)
+            time.sleep(0.01)
+        for dc in range(100, -1, -1):
+            pwm.ChangeDutyCycle(dc)
+            time.sleep(0.01)
 
-    cv2.imshow("Camera Test", frame)
+except KeyboardInterrupt:
+    pass
 
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
-
-cap.release()
-cv2.destroyAllWindows()
+pwm.stop()
+GPIO.cleanup()
 
 
 # sudo docker run -it --rm --privileged \
