@@ -1,7 +1,7 @@
 import socket
 import struct
 
-HOST = '젯슨IP주소'
+HOST = '192.168.0.45'
 PORT = 9999
 
 SAVE_PATH = 'received_image.jpg'
