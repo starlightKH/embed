@@ -1,4 +1,0 @@
-predict2,3은 실습 결과 (best.pt로 test,test2.jpg돌린것)
-predict4,5,6 은 추가 실습 결과 (bestv3.pt로 test,test2,test3.jpg돌린것.
-best.pt는 코랩에서 학습시킨 결과 (실습1)
-bestv3.pt는 추가실습 학습 결과
